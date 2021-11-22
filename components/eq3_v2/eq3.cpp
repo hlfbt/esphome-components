@@ -168,7 +168,7 @@ void EQ3Climate::control_retry(ClimateCall call, int tries) {
   });
 
   if (success) {
-    ESP_LOGW(TAG, "Climate control of %10llx succeeded.", address);
+    ESP_LOGI(TAG, "Climate control of %10llx succeeded.", address);
   } else if (--tries > 0) {
     ESP_LOGW(TAG, "Climate control of %10llx failed. Tries left: %d.", address, tries);
     set_timeout("control_retry", 3000, [this, call, tries]() {
@@ -189,25 +189,25 @@ void EQ3Climate::parse_state(const std::string &data) {
 
   auto state = (DeviceStateReturn*)data.c_str();
 
-  ESP_LOGI(TAG, "'%s': Valve: %d%%. Target: %.1f. Mode: %s.",
+  ESP_LOGD(TAG, "'%s': Valve: %d%%. Target: %.1f. Mode: %s.",
     get_name().c_str(),
     state->valve,
     state->target_temp.to_user(),
     state->mode.to_string().c_str());
 
-  ESP_LOGI(TAG, "'%s': Window Open: %d minutes. Temp: %.1f.",
+  ESP_LOGD(TAG, "'%s': Window Open: %d minutes. Temp: %.1f.",
     get_name().c_str(),
     state->window_open_time.to_minutes(),
     state->window_open_temp.to_user());
 
-  ESP_LOGI(TAG, "'%s': Temp: Comfort: %.1f. Eco: %.1f. Offset: %.1f.",
+  ESP_LOGD(TAG, "'%s': Temp: Comfort: %.1f. Eco: %.1f. Offset: %.1f.",
     get_name().c_str(),
     state->comfort_temp.to_user(),
     state->eco_temp.to_user(),
     state->temp_offset.to_user());
 
   if (state->away.valid()) {
-    ESP_LOGI(TAG, "'%s': Away: %04d-%02d-%02d %02d:%02d.",
+    ESP_LOGD(TAG, "'%s': Away: %04d-%02d-%02d %02d:%02d.",
       get_name().c_str(),
       state->away.to_year(),
       state->away.to_month(),
@@ -267,7 +267,7 @@ void EQ3Climate::parse_schedule(const std::string &data) {
       continue;
     }
 
-    ESP_LOGI(TAG, "'%s': Day %s: Schedule %d: Temp: %.1f. Till: %02d:%02d",
+    ESP_LOGD(TAG, "'%s': Day %s: Schedule %d: Temp: %.1f. Till: %02d:%02d",
       get_name().c_str(), DAY_NAMES[schedule->day], hour,
       hour_schedule.temp.to_user(),
       hour_schedule.till.to_hour(),
@@ -286,9 +286,9 @@ void EQ3Climate::parse_id(const std::string &data) {
   auto id = (const DeviceIDReturn*)data.c_str();
   last_id = true;
 
-  ESP_LOGI(TAG, "'%s': Version: %d", get_name().c_str(),
+  ESP_LOGD(TAG, "'%s': Version: %d", get_name().c_str(),
     id->version);
-  ESP_LOGI(TAG, "'%s': Serial: %s", get_name().c_str(),
+  ESP_LOGD(TAG, "'%s': Serial: %s", get_name().c_str(),
     hexencode(id->serial, sizeof(id->serial)).c_str());
 }
 
