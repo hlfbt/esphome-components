@@ -49,41 +49,41 @@ void EQ3Climate::update() {
 }
 
 void EQ3Climate::update_retry(int tries) {
-  ESP_LOGI(TAG, "Requesting update of %10llx...", address);
+  ESP_LOGI(TAG, "%s: Requesting update of %10llx...", get_name().c_str(), address);
 
   bool success = with_connection([this]() {
     return query_state();
   });
 
   if (success) {
-    ESP_LOGI(TAG, "Update of %10llx succeeded.", address);
+    ESP_LOGI(TAG, "%s: Update of %10llx succeeded.", get_name().c_str(), address);
   } else if (--tries > 0) {
-    ESP_LOGW(TAG, "Update of %10llx failed. Tries left: %d.", address, tries);
+    ESP_LOGW(TAG, "%s: Update of %10llx failed. Tries left: %d.", get_name().c_str(), address, tries);
     set_timeout("update_retry", 3000, [this, tries]() {
       update_retry(tries);
     });
   } else {
-    ESP_LOGW(TAG, "Update of %10llx failed. Too many tries.", address);
+    ESP_LOGW(TAG, "%s: Update of %10llx failed. Too many tries.", get_name().c_str(), address);
     reset_state();
   }
 }
 
 void EQ3Climate::update_id() {
-  ESP_LOGI(TAG, "Requesting ID of %10llx...", address);
+  ESP_LOGI(TAG, "%s: Requesting ID of %10llx...", get_name().c_str(), address);
 
   bool success = with_connection([this]() {
     return query_id();
   });
 
   if (success) {
-    ESP_LOGI(TAG, "ID of %10llx succeeded.", address);
+    ESP_LOGI(TAG, "%s: ID of %10llx succeeded.", get_name().c_str(), address);
   } else {
-    ESP_LOGW(TAG, "ID of %10llx failed. Too many tries.", address);
+    ESP_LOGW(TAG, "%s: ID of %10llx failed. Too many tries.", get_name().c_str(), address);
   }
 }
 
 void EQ3Climate::update_schedule() {
-  ESP_LOGI(TAG, "Requesting Schedule of %10llx...", address);
+  ESP_LOGI(TAG, "%s: Requesting Schedule of %10llx...", get_name().c_str(), address);
 
   bool success = with_connection([this]() {
     bool success = false;
@@ -96,9 +96,9 @@ void EQ3Climate::update_schedule() {
   });
 
   if (success) {
-    ESP_LOGI(TAG, "Schedule of %10llx succeeded.", address);
+    ESP_LOGI(TAG, "%s: Schedule of %10llx succeeded.", get_name().c_str(), address);
   } else {
-    ESP_LOGW(TAG, "Schedule of %10llx failed. Too many tries.", address);
+    ESP_LOGW(TAG, "%s: Schedule of %10llx failed. Too many tries.", get_name().c_str(), address);
   }
 }
 
@@ -117,7 +117,7 @@ void EQ3Climate::control(const ClimateCall &call) {
 }
 
 void EQ3Climate::control_retry(ClimateCall call, int tries) {
-  ESP_LOGI(TAG, "Requesting climate control of %10llx...", address);
+  ESP_LOGI(TAG, "%s: Requesting climate control of %10llx...", get_name().c_str(), address);
 
   bool success = with_connection([this, call]() {
     int calls = 0;
@@ -168,20 +168,21 @@ void EQ3Climate::control_retry(ClimateCall call, int tries) {
   });
 
   if (success) {
-    ESP_LOGI(TAG, "Climate control of %10llx succeeded.", address);
+    ESP_LOGI(TAG, "%s: Climate control of %10llx succeeded.", get_name().c_str(), address);
   } else if (--tries > 0) {
-    ESP_LOGW(TAG, "Climate control of %10llx failed. Tries left: %d.", address, tries);
+    ESP_LOGW(TAG, "%s; Climate control of %10llx failed. Tries left: %d.", get_name().c_str(), address, tries);
     set_timeout("control_retry", 3000, [this, call, tries]() {
       control_retry(call, tries);
     });
   } else {
-    ESP_LOGW(TAG, "Climate control of %10llx failed. Too many tries.", address);
+    ESP_LOGW(TAG, "%s: Climate control of %10llx failed. Too many tries.", get_name().c_str(), address);
   }
 }
 
 void EQ3Climate::parse_state(const std::string &data) {
   if (data.size() != sizeof(DeviceStateReturn)) {
-    ESP_LOGW(TAG, "State parse of %10llx failed: %s.",
+    ESP_LOGW(TAG, "%s: State parse of %10llx failed: %s.",
+      get_name().c_str(),
       address,
       hexencode((const uint8_t*)data.c_str(), data.size()).c_str());
     return;
@@ -189,25 +190,25 @@ void EQ3Climate::parse_state(const std::string &data) {
 
   auto state = (DeviceStateReturn*)data.c_str();
 
-  ESP_LOGD(TAG, "'%s': Valve: %d%%. Target: %.1f. Mode: %s.",
+  ESP_LOGD(TAG, "%s: Valve: %d%%. Target: %.1f. Mode: %s.",
     get_name().c_str(),
     state->valve,
     state->target_temp.to_user(),
     state->mode.to_string().c_str());
 
-  ESP_LOGD(TAG, "'%s': Window Open: %d minutes. Temp: %.1f.",
+  ESP_LOGD(TAG, "%s: Window Open: %d minutes. Temp: %.1f.",
     get_name().c_str(),
     state->window_open_time.to_minutes(),
     state->window_open_temp.to_user());
 
-  ESP_LOGD(TAG, "'%s': Temp: Comfort: %.1f. Eco: %.1f. Offset: %.1f.",
+  ESP_LOGD(TAG, "%s: Temp: Comfort: %.1f. Eco: %.1f. Offset: %.1f.",
     get_name().c_str(),
     state->comfort_temp.to_user(),
     state->eco_temp.to_user(),
     state->temp_offset.to_user());
 
   if (state->away.valid()) {
-    ESP_LOGD(TAG, "'%s': Away: %04d-%02d-%02d %02d:%02d.",
+    ESP_LOGD(TAG, "%s: Away: %04d-%02d-%02d %02d:%02d.",
       get_name().c_str(),
       state->away.to_year(),
       state->away.to_month(),
@@ -245,7 +246,8 @@ void EQ3Climate::parse_state(const std::string &data) {
 
 void EQ3Climate::parse_schedule(const std::string &data) {
   if (data.size() < sizeof(DeviceScheduleReturn)) {
-    ESP_LOGW(TAG, "Schedule parse of %10llx failed: %s.",
+    ESP_LOGW(TAG, "%s: Schedule parse of %10llx failed: %s.",
+      get_name().c_str(),
       address,
       hexencode((const uint8_t*)data.c_str(), data.size()).c_str());
     return;
@@ -253,8 +255,8 @@ void EQ3Climate::parse_schedule(const std::string &data) {
 
   auto schedule = (const DeviceScheduleReturn*)data.c_str();
   if (schedule->day > EQ3_LastDay) {
-    ESP_LOGI(TAG, "Schedule for %10llx returned invalid day: %d.",
-      address, schedule->day);
+    ESP_LOGI(TAG, "%s: Schedule for %10llx returned invalid day: %d.",
+      get_name().c_str(), address, schedule->day);
     return;
   }
 
@@ -267,7 +269,7 @@ void EQ3Climate::parse_schedule(const std::string &data) {
       continue;
     }
 
-    ESP_LOGD(TAG, "'%s': Day %s: Schedule %d: Temp: %.1f. Till: %02d:%02d",
+    ESP_LOGD(TAG, "%s: Day %s: Schedule %d: Temp: %.1f. Till: %02d:%02d",
       get_name().c_str(), DAY_NAMES[schedule->day], hour,
       hour_schedule.temp.to_user(),
       hour_schedule.till.to_hour(),
@@ -277,7 +279,8 @@ void EQ3Climate::parse_schedule(const std::string &data) {
 
 void EQ3Climate::parse_id(const std::string &data) {
   if (data.size() != sizeof(DeviceIDReturn)) {
-    ESP_LOGW(TAG, "ID parse of %10llx failed: %s.",
+    ESP_LOGW(TAG, "%s: ID parse of %10llx failed: %s.",
+      get_name().c_str(),
       address,
       hexencode((const uint8_t*)data.c_str(), data.size()).c_str());
     return;
@@ -286,9 +289,9 @@ void EQ3Climate::parse_id(const std::string &data) {
   auto id = (const DeviceIDReturn*)data.c_str();
   last_id = true;
 
-  ESP_LOGD(TAG, "'%s': Version: %d", get_name().c_str(),
+  ESP_LOGD(TAG, "%s: Version: %d", get_name().c_str(),
     id->version);
-  ESP_LOGD(TAG, "'%s': Serial: %s", get_name().c_str(),
+  ESP_LOGD(TAG, "%s: Serial: %s", get_name().c_str(),
     hexencode(id->serial, sizeof(id->serial)).c_str());
 }
 
