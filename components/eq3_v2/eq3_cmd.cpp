@@ -40,22 +40,22 @@ bool EQ3Climate::connect() {
   new_ble_client.reset(ESP32BLE::instance().acquire());
 
   if (!new_ble_client) {
-    ESP_LOGW(TAG, "Cannot acquire client for %10llx.", address);
+    ESP_LOGW(TAG, "%s: Cannot acquire client for %10llx.", get_name().c_str(), address);
     return false;
   }
 
   new_ble_client->set_address(address);
 
-  ESP_LOGV(TAG, "Connecting to %10llx...", address);
+  ESP_LOGV(TAG, "%s: Connecting to %10llx...", get_name().c_str(), address);
   
   if (!new_ble_client->connect()) {
-    ESP_LOGW(TAG, "Cannot connect to %10llx.", address);
+    ESP_LOGW(TAG, "%s: Cannot connect to %10llx.", get_name().c_str(), address);
     return false;
   }
 
   if (!new_ble_client->request_services()) {
     new_ble_client.reset();
-    ESP_LOGW(TAG, "Cannot request services from %10llx.", address);
+    ESP_LOGW(TAG, "%s: Cannot request services from %10llx.", get_name().c_str(), address);
     return false;
   }
 
@@ -64,14 +64,14 @@ bool EQ3Climate::connect() {
 
   if (!notify_handle) {
     new_ble_client.reset();
-    ESP_LOGE(TAG, "Cannot find notification handle for %10llx.", address);
+    ESP_LOGE(TAG, "%s: Cannot find notification handle for %10llx.", get_name().c_str(), address);
     return false;
   }
 
   new_ble_client->register_notify(notify_handle, true);
   new_ble_client->write_notify_desc(notify_handle, true, true);
 
-  ESP_LOGV(TAG, "Connected to %10llx.", address);
+  ESP_LOGV(TAG, "%s: Connected to %10llx.", get_name().c_str(), address);
   new_ble_client.swap(ble_client);
   return true;
 }
@@ -82,7 +82,7 @@ void EQ3Climate::disconnect() {
   }
 
   ble_client.reset();
-  ESP_LOGV(TAG, "Disconnected from %10llx.", address);
+  ESP_LOGV(TAG, "%s: Disconnected from %10llx.", get_name().c_str(), address);
 }
 
 bool EQ3Climate::send_command(void *command, uint16_t length) {
@@ -93,7 +93,7 @@ bool EQ3Climate::send_command(void *command, uint16_t length) {
   uint16_t command_handle = ble_client->get_characteristic(
     PROP_SERVICE_UUID, PROP_COMMAND_CHARACTERISTIC_UUID);
   if (!command_handle) {
-    ESP_LOGE(TAG, "Cannot find command handle for %10llx.", address);
+    ESP_LOGE(TAG, "%s: Cannot find command handle for %10llx.", get_name().c_str(), address);
     return false;
   }
 
@@ -104,10 +104,10 @@ bool EQ3Climate::send_command(void *command, uint16_t length) {
     true);
 
   if (result) {
-    ESP_LOGV(TAG, "Sent of `%s` to %10llx to handle %04x.",
+    ESP_LOGV(TAG, "%s: Sent of `%s` to %10llx to handle %04x.", get_name().c_str(),
       hexencode((const uint8_t*)command, length).c_str(), address, command_handle);
   } else {
-    ESP_LOGV(TAG, "Send of `%s` to %10llx to handle %04x: %d",
+    ESP_LOGV(TAG, "%s: Send of `%s` to %10llx to handle %04x: %d", get_name().c_str(),
       hexencode((const uint8_t*)command, length).c_str(), address, command_handle, result);
   }
 
@@ -126,11 +126,11 @@ bool EQ3Climate::wait_for_notify(int timeout_ms) {
   }
 
   if (notifications.empty()) {
-    ESP_LOGV(TAG, "Did not receive notification for %10llx.", address);
+    ESP_LOGV(TAG, "%s: Did not receive notification for %10llx.", get_name().c_str(), address);
     return false;
   }
 
-  ESP_LOGV(TAG, "Received notification for %10llx.", address);
+  ESP_LOGV(TAG, "%s: Received notification for %10llx.", get_name().c_str(), address);
   return true;
 }
 
@@ -141,7 +141,7 @@ bool EQ3Climate::query_id() {
 
 bool EQ3Climate::query_state() {
   if (!time_clock || !time_clock->now().is_valid()) {
-    ESP_LOGE(TAG, "Clock source for %10llx is not valid.", address);
+    ESP_LOGE(TAG, "%s: Clock source for %10llx is not valid.", get_name().c_str(), address);
     return false;
   }
 
@@ -284,7 +284,8 @@ void EQ3Climate::parse_client_notify(std::string data) {
       parse_id(data);
     });
   } else {
-    ESP_LOGW(TAG, "Received unknown characteristic from %10llx: %s.",
+    ESP_LOGW(TAG, "%s: Received unknown characteristic from %10llx: %s.",
+      get_name().c_str(),
       address,
       hexencode((const uint8_t*)data.c_str(), data.size()).c_str());
   }
