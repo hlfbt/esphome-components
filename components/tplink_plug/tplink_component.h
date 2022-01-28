@@ -13,13 +13,6 @@ class UDP;
 class WiFiServer;
 class WiFiClient;
 
-#ifdef ARDUINO_ARCH_ESP32
-#include <AsyncTCP.h>
-#endif
-#ifdef ARDUINO_ARCH_ESP8266
-#include <ESPAsyncTCP.h>
-#endif
-
 namespace esphome {
 namespace tplink {
 
@@ -45,16 +38,18 @@ class TplinkComponent : public esphome::Component {
   void add_plug(const Plug &plug) { plugs_.push_back(plug); }
 
  private:
+  using response_t = std::function<bool (const std::string &)>;
+
   void loop_udp_();
   void loop_tcp_();
   void loop_tcp_accept_();
   bool recv_tcp_(Client &client);
-  void process_(Stream *response, std::string &s);
-  void process_get_realtime_();
-  void process_get_sysinfo_();
-  void process_set_relay_state_(bool requested_state);
-  void process_set_led_state_(bool requested_state);
-  bool send_json_(const esphome::json::json_build_t &fn);
+  void process_(response_t response, std::string &s);
+  void process_get_realtime_(response_t response);
+  void process_get_sysinfo_(response_t response);
+  void process_set_relay_state_(response_t response, bool requested_state);
+  void process_set_led_state_(response_t response, bool requested_state);
+  bool send_json_(response_t response, const esphome::json::json_build_t &fn);
   void decrypt_(std::string &s);
   void encrypt_(std::string &s);
 
@@ -64,8 +59,6 @@ class TplinkComponent : public esphome::Component {
   std::unique_ptr<UDP> udp_;
   std::unique_ptr<WiFiServer> tcp_;
   std::vector<Client*> clients_;
-
-  Stream *response_{nullptr};
 };
 
 }  // namespace e131
